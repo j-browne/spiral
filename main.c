@@ -7,6 +7,31 @@
 #define IMG_HEIGHT 128
 #define COLOR_MAX 32
 
+void gen_img(png_bytepp rows, bool*** used)
+{
+	int r,g,b;
+	int scale=0x100/COLOR_MAX;
+	for (r=0; r<COLOR_MAX; ++r)
+	{
+		for (g=0; g<COLOR_MAX; ++g)
+		{
+			for (b=0; b<COLOR_MAX; ++b)
+			{
+				int y=(r*COLOR_MAX*COLOR_MAX + g*COLOR_MAX + b)/IMG_WIDTH;
+				int x=(r*COLOR_MAX*COLOR_MAX + g*COLOR_MAX + b)%IMG_WIDTH;
+				png_bytep pix=&(rows[y][x*4]);
+
+				pix[0]=r*scale; // R
+				pix[1]=g*scale; // G
+				pix[2]=b*scale; // B
+				pix[3]=0xff; // A
+				used[r][g][b]=true;
+			}
+		}
+	}
+	return;
+}
+
 int main()
 {
 	if (IMG_WIDTH * IMG_HEIGHT != COLOR_MAX * COLOR_MAX * COLOR_MAX)
@@ -19,7 +44,7 @@ FILE *fp;
 png_structp png_ptr;
 png_infop info_ptr;
 png_bytepp row_pointers;
-//bool*** used;
+bool*** used;
 
 /* SETUP
  * Allocate and initialize all needed space
@@ -60,7 +85,7 @@ png_bytepp row_pointers;
 		8, PNG_COLOR_TYPE_RGB_ALPHA, PNG_INTERLACE_NONE,
 		PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
 
-	int i,j;
+	int i,j,k;
 	row_pointers=malloc(sizeof(png_bytep)*IMG_HEIGHT);
 	if (row_pointers == NULL)
 	{
@@ -83,9 +108,31 @@ png_bytepp row_pointers;
 		}
 	}
 
+	used=malloc(COLOR_MAX*sizeof(bool**));
+	if (used == NULL)
+	{
+		longjmp(png_jmpbuf(png_ptr), 0);
+	}
+	for(i=0; i<COLOR_MAX; ++i)
+	{
+		used[i]=malloc(COLOR_MAX*sizeof(bool*));
+		if (used[i] == NULL)
+		{
+			longjmp(png_jmpbuf(png_ptr), 0);
+		}
+		for(j=0; j<COLOR_MAX; ++j)
+		{
+			used[i][j]=calloc(COLOR_MAX, sizeof(bool));
+			if (used[i][j] == NULL)
+			{
+				longjmp(png_jmpbuf(png_ptr), 0);
+			}
+		}
+	}
+
 	/* GENERATE IMAGE
 	 */
-	
+	gen_img(row_pointers, used);
 
 	/* WRITE IMAGE
 	 */

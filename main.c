@@ -15,13 +15,15 @@ int main()
 		return 1;
 	}
 
-//	bool used[COLOR_MAX][COLOR_MAX][COLOR_MAX];
-	png_bytepp row_pointers;
+FILE *fp;
+png_structp png_ptr;
+png_infop info_ptr;
+png_bytepp row_pointers;
+//bool*** used;
 
-	FILE *fp;
-	png_structp png_ptr;
-	png_infop info_ptr;
-
+/* SETUP
+ * Allocate and initialize all needed space
+ */
 	fp = fopen("test.png", "wb");
 	if (fp == NULL)
 	{
@@ -48,7 +50,6 @@ int main()
 
 	if (setjmp(png_jmpbuf(png_ptr)))
 	{
-		/* If we get here, we had a problem writing the file */
 		fprintf (stderr, "Error writing file.\n");
 		fclose(fp);
 		png_destroy_write_struct(&png_ptr, &info_ptr);
@@ -61,9 +62,17 @@ int main()
 
 	int i,j;
 	row_pointers=malloc(sizeof(png_bytep)*IMG_HEIGHT);
+	if (row_pointers == NULL)
+	{
+		longjmp(png_jmpbuf(png_ptr), 0);
+	}
 	for(i=0; i<IMG_HEIGHT; ++i)
 	{
 		row_pointers[i]=malloc(png_get_rowbytes(png_ptr,info_ptr));
+		if (row_pointers[i] == NULL)
+		{
+			longjmp(png_jmpbuf(png_ptr), 0);
+		}
 		for(j=0; j<IMG_WIDTH; ++j)
 		{
 			png_bytep pix=&(row_pointers[i][j*4]);
@@ -74,11 +83,19 @@ int main()
 		}
 	}
 
+	/* GENERATE IMAGE
+	 */
+	
+
+	/* WRITE IMAGE
+	 */
 	png_init_io(png_ptr, fp);
 	png_write_info(png_ptr, info_ptr);
 	png_write_image(png_ptr, row_pointers);
 	png_write_end(png_ptr, info_ptr);
 
+	/* CLEANUP
+	 */
 	png_destroy_write_struct(&png_ptr, &info_ptr);
 	for(i=0; i<IMG_HEIGHT; ++i)
 	{

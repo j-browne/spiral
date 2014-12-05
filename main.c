@@ -1,7 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <math.h>
 #include <png.h>
+
+#define PI 3.14159265359
 
 #define IMG_WIDTH 256
 #define IMG_HEIGHT 128
@@ -75,6 +78,18 @@ int main()
 	}
 
 	gen_img(rows, used);
+
+	//TODO: REMOVE
+	for(i=0; i<IMG_HEIGHT; ++i)
+	{
+		for(j=0; j<IMG_WIDTH; ++j)
+		{
+			png_bytep pix=&(rows[i][j*4]);
+			pix[3]=0xff; // A
+		}
+	}
+	//END TODO
+
 	write_img("1.png", rows);
 
 	for(i=0; i<IMG_HEIGHT; ++i)
@@ -89,30 +104,46 @@ int main()
 void gen_img(png_bytepp rows, bool*** used)
 {
 	png_byte color[3];
+	double spiral_size=20;
 	int scale=0x100/COLOR_MAX;
-	int x,y;
-	for (y=0; y<IMG_HEIGHT; ++y)
+	int i,j;
+	// Create anchor points for spirals
+	for(i=0; i<4; ++i)
 	{
-		for (x=0; x<IMG_WIDTH; ++x)
+		for(j=0; true; ++j)
 		{
-			png_bytep pix=&(rows[y][x*4]);
+			int x=spiral_size*j*cos((j-i)*PI/2) + IMG_WIDTH/2;
+			int y=spiral_size*j*sin((j-i)*PI/2) + IMG_HEIGHT/2;
+			if (x<0 || x>IMG_WIDTH)
+			{
+				break;
+			}
 
 			do
 			{
 				rand_color(color);
 			} while(used[color[0]][color[1]][color[2]]);
-			pix[0]=color[0]*scale; // R
-			pix[1]=color[1]*scale; // G
-			pix[2]=color[2]*scale; // B
-			pix[3]=0xff; // A
-			used[color[0]][color[1]][color[2]]=true;
+
+			if (y > 0 && y < IMG_HEIGHT)
+			{
+				png_bytep pix=&(rows[y][x*4]);
+
+				if (pix[3] != 0xff) // If that pixel has not been changed already
+				{
+					pix[0]=color[0]*scale; // R
+					pix[1]=color[1]*scale; // G
+					pix[2]=color[2]*scale; // B
+					pix[3]=0xff; // A
+					used[color[0]][color[1]][color[2]]=true;
+				}
+			}
+		}
+	}
 
 //			char filename[128]="";
 //			printf("%d %d\n", x, y);
 //			sprintf(filename, "img/%05d.png", (r*COLOR_MAX*COLOR_MAX + g*COLOR_MAX + b));
 //			write_img(filename, rows);
-		}
-	}
 	return;
 }
 

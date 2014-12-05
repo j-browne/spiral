@@ -9,9 +9,12 @@
 
 void gen_img(png_bytepp rows, bool*** used);
 void write_img(const char* fname, png_bytepp rows);
+void rand_color(png_byte* pix);
 
 int main()
 {
+	srand(0);
+
 	if (IMG_WIDTH * IMG_HEIGHT != COLOR_MAX * COLOR_MAX * COLOR_MAX)
 	{
 		fprintf (stderr, "You're an idiot. The number of colors does not equal the number of pixels.\n");
@@ -85,24 +88,29 @@ int main()
 
 void gen_img(png_bytepp rows, bool*** used)
 {
-	int r,g,b;
+	png_byte color[3];
 	int scale=0x100/COLOR_MAX;
-	for (r=0; r<COLOR_MAX; ++r)
+	int x,y;
+	for (y=0; y<IMG_HEIGHT; ++y)
 	{
-		for (g=0; g<COLOR_MAX; ++g)
+		for (x=0; x<IMG_WIDTH; ++x)
 		{
-			for (b=0; b<COLOR_MAX; ++b)
-			{
-				int y=(r*COLOR_MAX*COLOR_MAX + g*COLOR_MAX + b)/IMG_WIDTH;
-				int x=(r*COLOR_MAX*COLOR_MAX + g*COLOR_MAX + b)%IMG_WIDTH;
-				png_bytep pix=&(rows[y][x*4]);
+			png_bytep pix=&(rows[y][x*4]);
 
-				pix[0]=r*scale; // R
-				pix[1]=g*scale; // G
-				pix[2]=b*scale; // B
-				pix[3]=0xff; // A
-				used[r][g][b]=true;
-			}
+			do
+			{
+				rand_color(color);
+			} while(used[color[0]][color[1]][color[2]]);
+			pix[0]=color[0]*scale; // R
+			pix[1]=color[1]*scale; // G
+			pix[2]=color[2]*scale; // B
+			pix[3]=0xff; // A
+			used[color[0]][color[1]][color[2]]=true;
+
+//			char filename[128]="";
+//			printf("%d %d\n", x, y);
+//			sprintf(filename, "img/%05d.png", (r*COLOR_MAX*COLOR_MAX + g*COLOR_MAX + b));
+//			write_img(filename, rows);
 		}
 	}
 	return;
@@ -161,5 +169,13 @@ void write_img(const char* fname, png_bytepp rows)
 	png_destroy_write_struct(&png_ptr, &info_ptr);
 	fclose(fp);
 
+	return;
+}
+
+void rand_color(png_byte* pix)
+{
+	pix[0]=rand()%COLOR_MAX;
+	pix[1]=rand()%COLOR_MAX;
+	pix[2]=rand()%COLOR_MAX;
 	return;
 }
